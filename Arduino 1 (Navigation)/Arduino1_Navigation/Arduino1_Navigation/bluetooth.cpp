@@ -5,6 +5,8 @@
 #include "bluetooth.h"
 #include "motors.h"
 #include "line_follower.h"
+#include "environment.h"
+#include "ultrasonic.h"
 
 SoftwareSerial bluetooth(BT_RX, BT_TX);
 
@@ -225,6 +227,51 @@ void bluetoothUpdate() {
 
     movementCommand = 'S';
     stopMotors();
+  }
+}
+
+// ================================================================
+// TELEMETRY (Arduino -> Phone)
+//
+// Sends KEY:VALUE lines that the Flutter app's updateFromTelemetry()
+// parses directly. Called periodically from loop() (see
+// TELEMETRY_INTERVAL in config.h).
+//
+// TEMP/HUM/GAS only send once Arduino 2 has delivered at least one
+// reading over the environment link (environmentHasData()).
+// ================================================================
+
+void bluetoothSendTelemetry() {
+  bluetooth.print("MODE:");
+  bluetooth.println(autoMode ? "AUTONOMOUS" : "MANUAL");
+
+  bluetooth.print("MOVEMENT:");
+  bluetooth.println(movementCommand);
+
+  bluetooth.print("OBSTACLE:");
+  bluetooth.println(obstacleEnabled ? "ON" : "OFF");
+
+  bluetooth.print("BUZZER:");
+  bluetooth.println(buzzerEnabled ? "ON" : "OFF");
+
+  bluetooth.print("FRONT:");
+  bluetooth.println(getFrontDistance());
+
+  bluetooth.print("REAR:");
+  bluetooth.println(getRearDistance());
+
+  if (environmentHasData()) {
+    bluetooth.print("TEMP:");
+    bluetooth.println(environmentGetTemp());
+
+    bluetooth.print("HUM:");
+    bluetooth.println(environmentGetHumidity());
+
+    bluetooth.print("GAS:");
+    bluetooth.println(environmentGetGas());
+
+    bluetooth.print("MOTION:");
+    bluetooth.println(environmentGetMotion() ? "1" : "0");
   }
 }
 
